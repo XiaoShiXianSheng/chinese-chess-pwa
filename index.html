@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>中国象棋 · 能和朋友一起下</title>
+<meta name="theme-color" content="#e8c98e">
+<meta name="description" content="中国象棋网页版：人机对战、同桌双人、好友房间联机，可安装到桌面离线玩。">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon.svg">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --paper:#f4efe4; --ink:#3a2f22; --wood:#e8c98e; --wood-d:#c9a163;
+    --red:#b03a2e; --black:#2f2b26; --line:#8a6a42; --accent:#c0392b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+  body{min-height:100vh;padding:14px 14px calc(18px + env(safe-area-inset-bottom));
+    background-image:radial-gradient(circle at 20% 0%,#fffaf0 0%,transparent 45%),
+                     radial-gradient(circle at 90% 100%,#efe6d3 0%,transparent 40%)}
+  .wrap{max-width:1000px;margin:0 auto}
+  header{display:flex;align-items:baseline;gap:10px;margin:4px 2px 12px}
+  h1{font-size:19px;letter-spacing:3px;margin:0;font-weight:700}
+  header .sub{font-size:12px;color:#8a7a63;letter-spacing:1px}
+  .layout{display:flex;gap:18px;align-items:flex-start}
+  @media (max-width:860px){ .layout{flex-direction:column;gap:12px} }
+  .boardbox{flex:0 0 auto;width:min(56vw,470px)}
+  @media (max-width:860px){ .boardbox{width:100%} }
+  .board-shell{position:relative;background:linear-gradient(160deg,#f0d6a4,#e2bd85);
+    border-radius:14px;padding:6px;box-shadow:0 10px 22px rgba(90,60,20,.22),inset 0 0 0 1px rgba(255,255,255,.5)}
+  svg.board{display:block;width:100%;height:auto;border-radius:9px;touch-action:manipulation}
+  .panel{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:10px}
+  .card{background:#fffdf6;border:1px solid #e6dcc6;border-radius:12px;padding:11px 12px;
+    box-shadow:0 2px 8px rgba(120,95,60,.08)}
+  .status{display:flex;align-items:center;gap:9px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#b03a2e;flex:0 0 auto}
+  .dot.black{background:#2f2b26}
+  .status .txt{font-size:14px;font-weight:600}
+  .status .hint{font-size:12px;color:#9a8a72;margin-left:auto}
+  .tabs{display:flex;gap:6px;background:#efe7d5;padding:4px;border-radius:10px}
+  .tab{flex:1;border:0;background:transparent;color:#6d5b42;font-size:13px;padding:7px 4px;
+    border-radius:8px;cursor:pointer;font-weight:600}
+  .tab.on{background:#fffdf6;color:#b03a2e;box-shadow:0 1px 4px rgba(120,95,60,.18)}
+  .row{display:flex;gap:8px;align-items:center}
+  .btn{flex:1;border:1px solid #d8c8a8;background:#fffaf0;color:#5a472f;border-radius:9px;
+    padding:9px 8px;font-size:13px;cursor:pointer;font-weight:600;transition:.15s}
+  .btn:hover{background:#fff3dc}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:#b03a2e;border-color:#a03024;color:#fff}
+  .btn.primary:hover{background:#c04434}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .field{width:100%;border:1px solid #d8c8a8;background:#fff;border-radius:9px;padding:9px;
+    font-size:14px;color:#3a2f22;letter-spacing:2px;text-transform:uppercase}
+  .field::placeholder{letter-spacing:0;text-transform:none;color:#b3a58e}
+  .hintline{font-size:12px;color:#8a7a63;line-height:1.6}
+  .roomcode{font-size:22px;font-weight:800;letter-spacing:6px;color:#b03a2e;margin:6px 0 2px}
+  .badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;
+    background:#f0e7d4;color:#7d6a4f;margin-left:6px;vertical-align:middle}
+  .log{height:132px;overflow:auto;font-size:12.5px;line-height:1.75;color:#5d4d37;
+    border-top:1px dashed #e6dcc6;padding-top:6px;margin-top:8px}
+  .log div:nth-child(odd){background:#fbf7ec;border-radius:4px}
+  .log .r{color:#b03a2e}
+  .log .b{color:#3a3229}
+  .sec-title{font-size:12px;color:#8a7a63;letter-spacing:1px;margin:0 0 6px}
+  .banner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    background:rgba(255,253,246,.96);border:1px solid #d9c8a8;border-radius:14px;
+    padding:18px 22px;text-align:center;box-shadow:0 10px 30px rgba(80,55,20,.25);
+    min-width:200px;display:none;z-index:9}
+  .banner.show{display:block}
+  .banner h3{margin:0 0 10px;font-size:17px;letter-spacing:2px;color:#b03a2e}
+  .banner p{margin:0 0 12px;font-size:13px;color:#7d6a4f}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:#3a2f22;color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:20}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .mode-pane{display:none}
+  .mode-pane.on{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>中国象棋</h1>
+    <span class="sub">人机 · 同桌 · 好友房间</span>
+  </header>
+
+  <div class="layout">
+    <div class="boardbox">
+      <div class="board-shell">
+        <svg class="board" id="board" viewBox="-1 -1 10 11" aria-label="棋盘"></svg>
+        <div class="banner" id="banner">
+          <h3 id="bannerTitle">红方胜</h3>
+          <p id="bannerText"></p>
+          <button class="btn primary" onclick="doRestart()">再来一局</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <div class="status">
+          <span class="dot" id="turnDot"></span>
+          <span class="txt" id="turnText">红方先走</span>
+          <span class="hint" id="statusHint"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tabs">
+          <button class="tab on" data-mode="ai">人机对战</button>
+          <button class="tab" data-mode="local">两人同桌</button>
+          <button class="tab" data-mode="online">好友房间</button>
+        </div>
+
+        <div class="mode-pane on" id="pane-ai" style="margin-top:10px">
+          <div class="row" style="margin-bottom:8px">
+            <span class="sec-title" style="margin:0">电脑棋力</span>
+            <select id="aiLevel" class="field" style="flex:1;text-transform:none;letter-spacing:0">
+              <option value="2">入门（反应快）</option>
+              <option value="3" selected>普通</option>
+              <option value="4">稍强（会想一会儿）</option>
+            </select>
+          </div>
+          <div class="hintline">你执红先行，电脑执黑。</div>
+        </div>
+
+        <div class="mode-pane" id="pane-local" style="margin-top:10px">
+          <div class="hintline">同一台设备轮流走，红黑交替。</div>
+        </div>
+
+        <div class="mode-pane" id="pane-online" style="margin-top:10px">
+          <div class="row" style="margin-bottom:8px">
+            <button class="btn primary" onclick="createRoom()">创建房间（我执红）</button>
+          </div>
+          <div class="row">
+            <input class="field" id="joinCode" maxlength="6" placeholder="输入房间号，如 K7QD" style="flex:1">
+            <button class="btn" style="flex:0 0 88px" onclick="joinRoom()">加入</button>
+          </div>
+          <div id="roomInfo" style="display:none;margin-top:10px">
+            <div class="sec-title" style="margin:0">房间号</div>
+            <div class="roomcode" id="roomCode">----</div>
+            <div class="row">
+              <button class="btn" onclick="copyInvite()">复制邀请链接</button>
+              <button class="btn ghost" onclick="shareInvite()">分享</button>
+            </div>
+          </div>
+          <div class="hintline" style="margin-top:8px" id="netHint">
+            好友打开同一个网址、输房间号即可。双方浏览器直连，不经过服务器。
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <button class="btn" onclick="doUndo()">悔棋</button>
+          <button class="btn" onclick="doResign()">认输</button>
+          <button class="btn" onclick="doRestart()">重新开局</button>
+        </div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="./engine.js"></script>
+<script>
+/* PeerJS 按需加载：本站纯静态，联机组件从 CDN 取（带备用源），失败会给出提示 */
+(function loadPeer(){
+  var urls = ['./peerjs.min.js',
+              'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js',
+              'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'];
+  var i = 0;
+  function next(){
+    if (i >= urls.length) { window.__peerLoadFailed = true; return; }
+    var s = document.createElement('script');
+    s.src = urls[i++];
+    s.onload = function(){ window.__peerReady = true; if (window.__peerWaitCb) window.__peerWaitCb(); };
+    s.onerror = next;
+    document.head.appendChild(s);
+  }
+  next();
+})();
+</script>
+<script>
+/* ================= 状态 ================= */
+var ROWS = 10, COLS = 9;
+var board = XQ.initialBoard();
+var moves = [];               // [fx,fy,tx,ty] 历史
+var redTurn = true;
+var mode = 'ai';              // ai | local | online
+var selected = null;
+var aiLevel = 3;
+var thinking = false;
+var gameOver = false;
+
+var myColor = null;           // online: 'red' | 'black'
+var peer = null, conn = null;
+var currentRoom = null;
+
+var NAME = {K:'帅',A:'士',E:'相',R:'车',H:'马',C:'炮',P:'兵',
+            k:'将',a:'士',e:'象',r:'车',h:'马',c:'炮',p:'卒'};
+
+/* ================= 画棋盘 ================= */
+var SVGNS = 'http://www.w3.org/2000/svg';
+var svg = document.getElementById('board');
+
+function el(name, attrs) {
+  var e = document.createElementNS(SVGNS, name);
+  for (var k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+function drawStaticBoard() {
+  var g = el('g', {});
+  // 木质底
+  g.appendChild(el('rect', {x:-1, y:-1, width:10, height:11, rx:0.35, fill:'#e8c98e'}));
+  g.appendChild(el('rect', {x:-0.72, y:-0.72, width:9.44, height:10.44, rx:0.12,
+    fill:'none', stroke:'#8a6a42', 'stroke-width':0.045}));
+  g.appendChild(el('rect', {x:-0.86, y:-0.86, width:9.72, height:10.72, rx:0.16,
+    fill:'none', stroke:'#8a6a42', 'stroke-width':0.045, opacity:.6}));
+
+  var i;
+  for (i = 0; i < ROWS; i++) {
+    g.appendChild(el('line', {x1:0, y1:i, x2:8, y2:i, stroke:'#8a6a42', 'stroke-width':0.035}));
+  }
+  for (i = 0; i < COLS; i++) {
+    if (i === 0 || i === 8) {
+      g.appendChild(el('line', {x1:i, y1:0, x2:i, y2:9, stroke:'#8a6a42', 'stroke-width':0.035}));
+    } else {
+      g.appendChild(el('line', {x1:i, y1:0, x2:i, y2:4, stroke:'#8a6a42', 'stroke-width':0.035}));
+      g.appendChild(el('line', {x1:i, y1:5, x2:i, y2:9, stroke:'#8a6a42', 'stroke-width':0.035}));
+    }
+  }
+  // 九宫斜线
+  [[3,0,5,2],[5,0,3,2],[3,7,5,9],[5,7,3,9]].forEach(function (l) {
+    g.appendChild(el('line', {x1:l[0], y1:l[1], x2:l[2], y2:l[3], stroke:'#8a6a42', 'stroke-width':0.03}));
+  });
+  // 河界
+  var t1 = el('text', {x:2.1, y:4.78, 'font-size':0.52, fill:'#7c5d36', 'text-anchor':'middle',
+    'letter-spacing':0.22, opacity:.85});
+  t1.textContent = '楚 河';
+  var t2 = el('text', {x:5.9, y:4.78, 'font-size':0.52, fill:'#7c5d36', 'text-anchor':'middle',
+    'letter-spacing':0.22, opacity:.85});
+  t2.textContent = '汉 界';
+  g.appendChild(t1); g.appendChild(t2);
+  return g;
+}
+
+function render() {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  svg.appendChild(drawStaticBoard());
+
+  // 可落点提示
+  var targets = [];
+  if (selected && !gameOver) {
+    targets = XQ.movesForPiece(board, selected[0], selected[1]);
+  }
+
+  var x, y, p, g;
+  for (y = 0; y < ROWS; y++) {
+    for (x = 0; x < COLS; x++) {
+      var hit = null;
+      for (var t = 0; t < targets.length; t++) if (targets[t][2] === x && targets[t][3] === y) hit = targets[t];
+      if (hit) {
+        var isCap = !!board[y][x];
+        if (isCap) {
+          svg.appendChild(el('circle', {cx:x, cy:y, r:0.47, fill:'none', stroke:'#c0392b',
+            'stroke-width':0.075, opacity:.85}));
+        } else {
+          svg.appendChild(el('circle', {cx:x, cy:y, r:0.11, fill:'#b03a2e', opacity:.55}));
+        }
+      }
+    }
+  }
+
+  // 上一步高亮
+  if (moves.length) {
+    var last = moves[moves.length - 1];
+    [[last[0], last[1]], [last[2], last[3]]].forEach(function (q) {
+      svg.appendChild(el('rect', {x:q[0]-0.2, y:q[1]-0.2, width:0.4, height:0.4, rx:0.06,
+        fill:'#7cb342', opacity:.28}));
+    });
+  }
+
+  // 棋子
+  for (y = 0; y < ROWS; y++) {
+    for (x = 0; x < COLS; x++) {
+      p = board[y][x];
+      if (!p) continue;
+      var red = XQ.isRed(p);
+      g = el('g', {transform:'translate(' + x + ',' + y + ')', style:'cursor:pointer'});
+      g.appendChild(el('circle', {cx:0, cy:0.03, r:0.45, fill:'rgba(0,0,0,.18)'}));
+      g.appendChild(el('circle', {cx:0, cy:0, r:0.45, fill:red ? '#fdf3e0' : '#f7efe0',
+        stroke:red ? '#b03a2e' : '#3a3229', 'stroke-width':0.035}));
+      g.appendChild(el('circle', {cx:0, cy:0, r:0.36, fill:'none',
+        stroke:red ? '#cf7a6b' : '#8d8071', 'stroke-width':0.022}));
+      var txt = el('text', {x:0, y:0.175, 'font-size':0.5, 'text-anchor':'middle',
+        fill:red ? '#b03a2e' : '#2f2b26', 'font-weight':700});
+      txt.textContent = NAME[p];
+      g.appendChild(txt);
+      if (selected && selected[0] === x && selected[1] === y) {
+        g.appendChild(el('circle', {cx:0, cy:0, r:0.5, fill:'none', stroke:'#2f7d32', 'stroke-width':0.07}));
+      }
+      svg.appendChild(g);
+    }
+  }
+  updateStatus();
+}
+
+/* ================= 点击落子 ================= */
+svg.addEventListener('click', function (ev) {
+  var pt = svg.createSVGPoint();
+  pt.x = ev.clientX; pt.y = ev.clientY;
+  var loc = pt.matrixTransform(svg.getScreenCTM().inverse());
+  var cx = Math.round(loc.x), cy = Math.round(loc.y);
+  if (cx < 0 || cx > 8 || cy < 0 || cy > 9) return;
+  var dx = loc.x - cx, dy = loc.y - cy;
+  if (Math.sqrt(dx * dx + dy * dy) > 0.55) return;
+  onTap(cx, cy);
+});
+
+function myTurnToMove() {
+  if (mode !== 'online') return true;
+  return (redTurn ? 'red' : 'black') === myColor;
+}
+
+function onTap(x, y) {
+  if (gameOver || thinking) return;
+  if (!myTurnToMove()) { toast('还没轮到你走'); return; }
+
+  var p = board[y][x];
+
+  if (selected) {
+    var from = selected;
+    if (from[0] === x && from[1] === y) { selected = null; render(); return; }
+    if (canMove(from[0], from[1], x, y)) {
+      makeMove([from[0], from[1], x, y], true);
+      return;
+    }
+    // 点了自己的另一颗子 → 改选
+    if (p && XQ.isRed(p) === redTurn) { selected = [x, y]; render(); return; }
+    toast('这步走不了');
+    return;
+  }
+
+  if (!p) return;
+  if (XQ.isRed(p) !== redTurn) { toast(redTurn ? '现在轮到红方' : '现在轮到黑方'); return; }
+  if (mode === 'online' && myColor !== (redTurn ? 'red' : 'black')) return;
+  selected = [x, y];
+  render();
+}
+
+function canMove(fx, fy, tx, ty) {
+  var list = XQ.movesForPiece(board, fx, fy);
+  for (var i = 0; i < list.length; i++) {
+    if (list[i][2] === tx && list[i][3] === ty) return true;
+  }
+  return false;
+}
+
+/* ================= 走子 ================= */
+function makeMove(m, broadcast) {
+  var fx = m[0], fy = m[1], tx = m[2], ty = m[3];
+  var piece = board[fy][fx], cap = board[ty][tx];
+  board = XQ.applyMove(board, m);
+  moves.push(m);
+  selected = null;
+  redTurn = !redTurn;
+
+  addLog(m, piece, cap);
+  render();
+
+  var st = XQ.statusAfter(board, redTurn);
+  if (st.over) {
+    gameOver = true;
+    showBanner((redTurn ? '黑方' : '红方') + '胜', st.reason === 'checkmate' ? '将死！' : '无棋可走，困毙。');
+    render();
+  } else if (st.inCheck) {
+    toast((redTurn ? '红方' : '黑方') + '被将军！');
+  }
+
+  if (broadcast && mode === 'online' && conn && conn.open) {
+    conn.send({t:'move', m:m});
+  }
+
+  if (mode === 'ai' && !gameOver && !redTurn) aiPlay();
+  saveLocal();
+}
+
+function aiPlay() {
+  thinking = true;
+  updateStatus();
+  setTimeout(function () {
+    var mv = XQ.bestMove(board, false, aiLevel);
+    thinking = false;
+    if (!mv) { gameOver = true; showBanner('红方胜', '电脑无棋可走。'); render(); return; }
+    makeMove(mv, false);
+  }, 90);
+}
+
+/* ================= 状态显示 ================= */
+function updateStatus() {
+  var dot = document.getElementById('turnDot');
+  var txt = document.getElementById('turnText');
+  var hint = document.getElementById('statusHint');
+  dot.className = 'dot' + (redTurn ? '' : ' black');
+
+  if (gameOver) { txt.textContent = '本局结束'; hint.textContent = ''; return; }
+
+  var side = redTurn ? '红方' : '黑方';
+  var me = '';
+  if (mode === 'online' && myColor) {
+    me = (myColor === (redTurn ? 'red' : 'black')) ? '（你走）' : '（等对手）';
+  }
+  if (thinking) { txt.textContent = '电脑思考中…'; return; }
+  txt.textContent = side + '走棋' + me;
+
+  if (XQ.inCheck(board, redTurn)) hint.textContent = '将军！';
+  else if (mode === 'online') hint.textContent = conn && conn.open ? '已连接' : '未连接';
+  else hint.textContent = mode === 'ai' ? '人机' : '同桌';
+}
+
+function showBanner(title, text) {
+  document.getElementById('bannerTitle').textContent = title;
+  document.getElementById('bannerText').textContent = text || '';
+  document.getElementById('banner').classList.add('show');
+}
+function hideBanner() { document.getElementById('banner').classList.remove('show'); }
+
+var toastTimer = null;
+function toast(msg) {
+  var el2 = document.getElementById('toast');
+  el2.textContent = msg;
+  el2.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el2.classList.remove('show'); }, 1600);
+}
+
+/* ================= 记录 ================= */
+function addLog(m, piece, cap) {
+  var log = document.getElementById('log');
+  var div = document.createElement('div');
+  var isRedPiece = piece ? XQ.isRed(piece) : null;
+  var cls = isRedPiece ? 'r' : 'b';
+  var idx = moves.length;
+  var label = piece ? (isRedPiece ? '红' : '黑') + '·' + NAME[piece] : '走子';
+  var s = '<span class="' + cls + '">' + label + '</span> ' +
+          (m[0] + 1) + ',' + (m[1] + 1) + ' → ' + (m[2] + 1) + ',' + (m[3] + 1);
+  if (cap) s += ' <b>吃' + NAME[cap] + '</b>';
+  div.innerHTML = '<span style="color:#a9997e">' + idx + '.</span> ' + s;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+function clearLog() { document.getElementById('log').innerHTML = ''; }
+
+/* ================= 悔棋 / 认输 / 重开 ================= */
+function doUndo() {
+  if (gameOver) return;
+  if (mode === 'online') { toast('联机对局暂不支持悔棋'); return; }
+  if (!moves.length) { toast('还没走过棋'); return; }
+  if (thinking) return;
+  var n = (mode === 'local') ? 1 : 2;
+  if (moves.length < n) n = moves.length;
+  applyUndo(n);
+}
+
+function applyUndo(n) {
+  for (var i = 0; i < n && moves.length; i++) moves.pop();
+  replay();
+  gameOver = false;
+  hideBanner();
+  selected = null;
+  render();
+  saveLocal();
+}
+
+function replay() {
+  board = XQ.initialBoard();
+  for (var i = 0; i < moves.length; i++) board = XQ.applyMove(board, moves[i]);
+  redTurn = moves.length % 2 === 0;
+}
+
+function doRestart() {
+  applyUndo(moves.length);
+  clearLog();
+  hideBanner();
+  if (mode === 'online' && conn && conn.open) conn.send({t:'restart'});
+  saveLocal();
+  toast('新的一局');
+}
+
+function doResign() {
+  if (gameOver) return;
+  gameOver = true;
+  var loser = mode === 'online' && myColor ? myColor : (redTurn ? 'red' : 'black');
+  showBanner((loser === 'red' ? '黑方' : '红方') + '胜', '对手认输');
+  if (mode === 'online' && conn && conn.open) conn.send({t:'resign'});
+}
+
+/* ================= 模式切换 ================= */
+document.querySelectorAll('.tab').forEach(function (tab) {
+  tab.addEventListener('click', function () {
+    setMode(tab.dataset.mode);
+  });
+});
+
+function setMode(m) {
+  if (mode === m) return;
+  mode = m;
+  document.querySelectorAll('.tab').forEach(function (t) {
+    t.classList.toggle('on', t.dataset.mode === m);
+  });
+  ['ai','local','online'].forEach(function (k) {
+    document.getElementById('pane-' + k).classList.toggle('on', k === m);
+  });
+  myColor = null;
+  if (m === 'online') {
+    // 保留局面，等房间
+  } else {
+    closeNet();
+    document.getElementById('roomInfo').style.display = 'none';
+  }
+  doRestart();
+  updateStatus();
+}
+
+document.getElementById('aiLevel').addEventListener('change', function (e) {
+  aiLevel = parseInt(e.target.value, 10);
+});
+
+/* ================= 联机（WebRTC / PeerJS） ================= */
+var PEER_PREFIX = 'xiangqi-v1-';
+var ICE = {
+  iceServers: [
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'turn:openrelay.metered.ca:80', username:'openrelayproject', credential:'openrelayproject'},
+    {urls:'turn:openrelay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject'},
+    {urls:'turn:openrelay.metered.ca:443?transport=tcp', username:'openrelayproject', credential:'openrelayproject'}
+  ]
+};
+
+function genCode() {
+  var chars = 'ACDEFGHJKLMNPQRTUVWXY34679';
+  var s = '';
+  for (var i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+function setNetHint(txt) { document.getElementById('netHint').textContent = txt; }
+
+function closeNet() {
+  try { if (conn) conn.close(); } catch (e) {}
+  try { if (peer) peer.destroy(); } catch (e) {}
+  conn = null; peer = null; currentRoom = null;
+}
+
+function resetQuietly() {
+  moves = []; board = XQ.initialBoard(); redTurn = true; selected = null;
+  gameOver = false; hideBanner(); clearLog(); render();
+}
+
+function withPeer(fn) {
+  if (typeof Peer !== 'undefined') { fn(); return; }
+  if (window.__peerLoadFailed) { toast('联机组件加载失败，请检查网络后刷新'); return; }
+  toast('正在加载联机组件…');
+  window.__peerWaitCb = function () { if (typeof Peer !== 'undefined') fn(); };
+  setTimeout(function () {
+    if (typeof Peer === 'undefined') toast('联机组件加载较慢，稍等重试');
+  }, 6000);
+}
+
+function createRoom() { withPeer(createRoomReal); }
+function createRoomReal() {
+  closeNet();
+  resetQuietly();
+  var code = genCode();
+  peer = new Peer(PEER_PREFIX + code, {config:ICE, debug:0});
+  peer.on('open', function () {
+    currentRoom = code;
+    myColor = 'red';
+    redTurn = true;
+    document.getElementById('roomInfo').style.display = 'block';
+    document.getElementById('roomCode').textContent = code;
+    setNetHint('等待好友加入…把房间号或邀请链接发给他。');
+    updateStatus();
+    toast('房间已创建：' + code);
+  });
+  peer.on('error', function (err) {
+    if (err.type === 'unavailable-id') { createRoom(); return; }
+    setNetHint('连接失败（' + err.type + '）：' + err.message);
+    toast('联机未成功，可先玩人机和同桌');
+  });
+  peer.on('connection', function (c) {
+    if (conn) { try { c.close(); } catch (e) {} return; }
+    conn = c;
+    wireConn(c, true);
+  });
+}
+
+function joinRoom() { withPeer(joinRoomReal); }
+function joinRoomReal() {
+  var code = (document.getElementById('joinCode').value || '').trim().toUpperCase();
+  if (code.length < 4) { toast('请输入 4 位房间号'); return; }
+  closeNet();
+  resetQuietly();
+  currentRoom = code;
+  myColor = 'black';
+  setNetHint('正在连接房间 ' + code + ' …');
+  peer = new Peer({config:ICE, debug:0});
+  peer.on('open', function () {
+    conn = peer.connect(PEER_PREFIX + code, {reliable:true});
+    wireConn(conn, false);
+    conn.on('open', function () {
+      document.getElementById('roomCode').textContent = code;
+      document.getElementById('roomInfo').style.display = 'block';
+      setNetHint('已连上房主，你执黑后走。');
+      updateStatus();
+    });
+    setTimeout(function () {
+      if (!conn || !conn.open) setNetHint('连不上房主：确认房间号正确、房主页面还开着。');
+    }, 9000);
+  });
+  peer.on('error', function (err) {
+    if (err.type === 'peer-unavailable') {
+      setNetHint('房间里没人（房间号错了，或房主已离开）。');
+    } else {
+      setNetHint('连接出错：' + err.type);
+    }
+  });
+}
+
+function wireConn(c, isHost) {
+  c.on('open', function () {
+    if (isHost) c.send({t:'state', moves:moves});
+    updateStatus();
+    toast(isHost ? '好友已加入，你先走' : '已加入房间');
+  });
+  c.on('data', function (data) {
+    if (!data || !data.t) return;
+    if (data.t === 'state') {
+      moves = data.moves || [];
+      replay();
+      gameOver = false; hideBanner(); clearLog();
+      for (var i = 0; i < moves.length; i++) addLog(moves[i], null, null);
+      redTurn = moves.length % 2 === 0;
+      render();
+    } else if (data.t === 'move') {
+      var m = data.m;
+      if (!m) return;
+      // 校验：必须轮到对手、且走法合法
+      var pc = board[m[1]][m[0]];
+      if (!pc || XQ.isRed(pc) !== redTurn) { conn.send({t:'state', moves:moves}); return; }
+      var legal = XQ.movesForPiece(board, m[0], m[1]);
+      var ok = false;
+      for (var k = 0; k < legal.length; k++) if (legal[k][2] === m[2] && legal[k][3] === m[3]) ok = true;
+      if (!ok) { conn.send({t:'state', moves:moves}); return; }
+      makeMove(m, false);
+    } else if (data.t === 'undo') {
+      applyUndo(data.n || 2);
+    } else if (data.t === 'restart') {
+      applyUndo(moves.length); clearLog(); hideBanner(); toast('对手重新开局');
+    } else if (data.t === 'resign') {
+      gameOver = true;
+      showBanner((myColor === 'red' ? '红方' : '黑方') + '胜', '对手认输');
+    }
+  });
+  c.on('close', function () {
+    setNetHint('对手已断开连接。');
+    updateStatus();
+    toast('对手断开了');
+  });
+}
+
+function inviteURL() {
+  var base = location.origin + location.pathname;
+  return base + '?room=' + (currentRoom || '');
+}
+
+function copyInvite() {
+  var url = inviteURL();
+  var done = function () { toast('邀请链接已复制'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done, function () { prompt('复制这个链接发给好友：', url); });
+  } else {
+    prompt('复制这个链接发给好友：', url);
+  }
+}
+
+function shareInvite() {
+  var url = inviteURL();
+  if (navigator.share) {
+    navigator.share({title:'来下盘象棋', text:'房间号 ' + currentRoom + '，点开就能进：', url:url})
+      .catch(function(){});
+  } else {
+    copyInvite();
+  }
+}
+
+/* 通过邀请链接进入：?room=CODE */
+(function autoJoinFromURL() {
+  var q = new URLSearchParams(location.search);
+  var room = (q.get('room') || '').toUpperCase();
+  if (!room) return;
+  document.querySelector('.tab[data-mode="online"]').click();
+  document.getElementById('joinCode').value = room;
+  setTimeout(joinRoom, 300);
+})();
+
+/* ================= 本地存档 ================= */
+function saveLocal() {
+  if (mode === 'online') return;
+  try {
+    localStorage.setItem('xq-save', JSON.stringify({moves:moves, mode:mode, level:aiLevel, t:Date.now()}));
+  } catch (e) {}
+}
+
+function loadLocal() {
+  try {
+    var raw = localStorage.getItem('xq-save');
+    if (!raw) return false;
+    var d = JSON.parse(raw);
+    if (!d || !d.moves || !d.moves.length) return false;
+    moves = d.moves;
+    replay();
+    clearLog();
+    for (var i = 0; i < moves.length; i++) addLog(moves[i], null, null);
+    if (d.level) aiLevel = d.level;
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ================= 启动 ================= */
+render();
+if (loadLocal()) {
+  render();
+  toast('已恢复上一局');
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./service-worker.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
