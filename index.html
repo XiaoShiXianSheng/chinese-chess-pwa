@@ -166,7 +166,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="./engine.js"></script>
+<script src="./engine.js" onerror="(function(){var s=document.createElement('script');s.src='./engine.js?r='+Date.now();s.onload=function(){location.reload()};document.head.appendChild(s);})()"></script>
 <script>
 /* PeerJS 按需加载：本站纯静态，联机组件从 CDN 取（带备用源），失败会给出提示 */
 (function loadPeer(){
@@ -188,7 +188,7 @@
 <script>
 /* ================= 状态 ================= */
 var ROWS = 10, COLS = 9;
-var board = XQ.initialBoard();
+var board = [];
 var moves = [];               // [fx,fy,tx,ty] 历史
 var redTurn = true;
 var mode = 'ai';              // ai | local | online
@@ -735,10 +735,16 @@ function loadLocal() {
 }
 
 /* ================= 启动 ================= */
-render();
-if (!new URLSearchParams(location.search).get('room') && loadLocal()) {
+if (typeof XQ === 'undefined') {
+  document.getElementById('turnText').textContent = '组件加载失败，请刷新';
+  document.getElementById('statusHint').textContent = '网络抖动导致，刷新即可';
+} else {
+  board = XQ.initialBoard();
   render();
-  toast('已恢复上一局');
+  if (!new URLSearchParams(location.search).get('room') && loadLocal()) {
+    render();
+    toast('已恢复上一局');
+  }
 }
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
