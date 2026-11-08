@@ -1,0 +1,26 @@
+{
+  "name": "中国象棋 · 好友房间",
+  "short_name": "中国象棋",
+  "description": "网页版中国象棋：人机对战、两人同桌、好友房间联机，可安装到桌面离线游玩。",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f4efe4",
+  "theme_color": "#e8c98e",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
