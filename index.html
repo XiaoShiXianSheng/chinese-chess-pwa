@@ -441,21 +441,31 @@ function toast(msg) {
 }
 
 /* ================= 记录 ================= */
-function addLog(m, piece, cap) {
+function addLog(m, piece, cap, idx) {
   var log = document.getElementById('log');
   var div = document.createElement('div');
   var isRedPiece = piece ? XQ.isRed(piece) : null;
   var cls = isRedPiece ? 'r' : 'b';
-  var idx = moves.length;
+  var n = (typeof idx === 'number') ? idx + 1 : moves.length;
   var label = piece ? (isRedPiece ? '红' : '黑') + '·' + NAME[piece] : '走子';
   var s = '<span class="' + cls + '">' + label + '</span> ' +
           (m[0] + 1) + ',' + (m[1] + 1) + ' → ' + (m[2] + 1) + ',' + (m[3] + 1);
   if (cap) s += ' <b>吃' + NAME[cap] + '</b>';
-  div.innerHTML = '<span style="color:#a9997e">' + idx + '.</span> ' + s;
+  div.innerHTML = '<span style="color:#a9997e">' + n + '.</span> ' + s;
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
 }
 function clearLog() { document.getElementById('log').innerHTML = ''; }
+
+function rebuildLog() {
+  var b = XQ.initialBoard();
+  clearLog();
+  for (var i = 0; i < moves.length; i++) {
+    var m = moves[i], pc = b[m[1]][m[0]], cp = b[m[3]][m[2]];
+    addLog(m, pc, cp, i);
+    b = XQ.applyMove(b, m);
+  }
+}
 
 /* ================= 悔棋 / 认输 / 重开 ================= */
 function doUndo() {
@@ -645,8 +655,8 @@ function wireConn(c, isHost) {
     if (data.t === 'state') {
       moves = data.moves || [];
       replay();
-      gameOver = false; hideBanner(); clearLog();
-      for (var i = 0; i < moves.length; i++) addLog(moves[i], null, null);
+      gameOver = false; hideBanner();
+      rebuildLog();
       redTurn = moves.length % 2 === 0;
       render();
     } else if (data.t === 'move') {
@@ -727,8 +737,7 @@ function loadLocal() {
     if (!d || !d.moves || !d.moves.length) return false;
     moves = d.moves;
     replay();
-    clearLog();
-    for (var i = 0; i < moves.length; i++) addLog(moves[i], null, null);
+    rebuildLog();
     if (d.level) aiLevel = d.level;
     return true;
   } catch (e) { return false; }
