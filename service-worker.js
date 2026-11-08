@@ -1,5 +1,5 @@
 /* 中国象棋 PWA 离线缓存 */
-var CACHE = 'xiangqi-v2';
+var CACHE = 'xiangqi-v3';
 var ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,10 @@ var ASSETS = [
   './peerjs.min.js',
   './manifest.json',
   './peerjs.min.js',
-  './icons/icon.svg'
+  './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png'
 ];
 
 self.addEventListener('install', function (e) {
